@@ -7,18 +7,6 @@ var basicAuthHeader = false
 
 
 /**
- * filter settings url
- */
-var filter = {
-    urls: [
-        "*://127.0.0.1/*",
-        "*://localhost/*"        
-    ],
-    types: ["main_frame", "sub_frame", "script", "object", "xmlhttprequest"]
-}
-
-
-/**
  * load settings from chrome
  */
 chrome.storage.sync.get({ settings: 
@@ -32,23 +20,19 @@ chrome.storage.sync.get({ settings:
 } 
 }, function(storage) {
     //GLOBALS
-    host = storage.settings.targetproto + "://" + storage.settings.targethost + ":" + storage.settings.targetport
+    host = `${storage.settings.targetproto}://${storage.settings.targethost}:${storage.settings.targetport}`
     pause = storage.settings.pause
         
     //build auth header (must not be used without https)
     if (storage.settings.targetproto == "https" && storage.settings.targetuser.length > 0 && storage.settings.targetpasswd.length > 0 ){
-        
-        //required for checkHeader function
-        filter.urls.push("*://" + storage.settings.targethost + "/*")
-
-        basicAuthHeader = {
-            name: "Authorization",
-            value: "Basic " + btoa( storage.settings.targetuser + ":" +  storage.settings.targetpasswd )        
-        }
+        host = `${storage.settings.targetproto}://${storage.settings.targethost}:${storage.settings.targetport}`
     }
 
+    basicAuthHeader = "Basic " + btoa( storage.settings.targetuser + ":" +  storage.settings.targetpasswd)
+    
+
     //TODO
-    //if (!pause)install_listener()
+    if (!pause)install_listener()
 })
 
 
@@ -85,118 +69,194 @@ function updateState( ){
 }
 
 
-// Handle extension icon click
-chrome.action.onClicked.addListener(async () => {
-    pause = !pause
-    //await updateRules()
-    
-    // Update icon
-    const iconPath = pause ? 
-        "images/icon_status_pause.png" : 
-        "images/icon_status.png"
-    
-    await chrome.action.setIcon({ path: iconPath })
-})
+//find form with non blocking onBeforeRequest
+//replace form target
+//todo replace form submit with custom post to add security header
 
+/**
+ * stage 2 replace form target
+ */
+function interceptPost(host){
 
-
-
-
-
-self.addEventListener("install", (event) => {
-    console.log("sw-omnibox.js")
-})
-
-
-// For debugging
-console.log('Service worker initialized')
-
-
-// const newRules = await getNewRules();
-// const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
-// const oldRuleIds = oldRules.map(rule => rule.id);
-
-// // Use the arrays to update the dynamic rules
-// await chrome.declarativeNetRequest.updateDynamicRules({
-//     removeRuleIds: oldRuleIds,
-//     addRules: newRules
-// });
-
-chrome.declarativeNetRequest.updateDynamicRules(
-    {
-        addRules: [
-            // {
-            //     "id": 1,
-            //     "priority": 1,
-            //     "action": { "type": "redirect", "redirect": { "extensionPath": "/a.jpg" } },
-            //     "condition": {
-            //         "urlFilter": "||https://www.example.com/",
-            //         "resourceTypes": ["main_frame"]
-            //     }
-            // },
-            // {
-            //     id: 2,
-            //     priority: 1,
-            //     action: {
-            //         type: "redirect",
-            //         redirect: { url: "http://192.168.81.1:9666" }
-            //     },
-            //     condition: {
-            //         urlFilter: "|http://127.0.0.1:9666",
-            //         resourceTypes: ["xmlhttprequest", "script"]
-            //     }
-            // },
-            {
-                id: 2,
-                priority: 1,
-                action: {
-                    type: "redirect",
-                    redirect:  { "extensionPath": "/jdcheck.js" }
-                },
-                condition: {
-                    urlFilter: "|http://127.0.0.1:9666",
-                    resourceTypes: ["xmlhttprequest", "script"]
-                }
-            },
-            {
-                id: 3,
-                priority: 1,
-                action: {
-                    type: "redirect",
-                    redirect:  { "extensionPath": "/addcrypted2.js" }
-                },
-                condition: {
-                    urlFilter: "|http://127.0.0.1:9666/flash/addcrypted2",
-                    resourceTypes: ["xmlhttprequest", "script"]
-                }
-            }
-        ],
-        removeRuleIds: [2] // Optionally remove existing rules by ID
-    },
-        () => {
-            if (chrome.runtime.lastError) {
-                console.log("Error updating rules:", chrome.runtime.lastError)
-            } else {
-                console.log("Dynamic rule added successfully.")
-            }
-        }
-)
-
-chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(
-    (info)=>{
-        
-        console.log(info)
-    }
-)
-
-
-function knusper(){
-
-    chrome.declarativeNetRequest.getMatchedRules(null,
-        (info)=>{
-            
-            console.log(info)
-        }
+    const forms = document.querySelectorAll(
+        'form[action="http://127.0.0.1:9666/flash/addcrypted2"][method="POST"]'
     )
 
+    //method1 
+    forms.forEach((form) => {
+        form.action = form.action.replace(/http:\/\/127\.0\.0\.1:9666/, host)
+        form.elements['source'].value = "Redirect Click'n'Load";
+    })
+    
+    //method2
+    //allows custom referrer for jDownloader Security
+    // forms.forEach(form => {
+
+    //     const formData = new FormData(form)
+        
+    //     //ignore empty forms    
+    //     if ( formData.get("package") == "" || formData.get("crypted") == "" || formData.get("jk") == "" ) return
+        
+    //     // Modify specific form fields before sending
+    //     if (formData.get("source")) {
+    //         formData.set("source", "Redirect Click'n'Load")
+    //     }
+    //     const urlEncodedData = new URLSearchParams(formData).toString()
+    //     chrome.runtime.sendMessage({ type: "push2jd", payload: urlEncodedData })
+
+    // })
 }
+
+//method2
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//     if (message.type === "push2jd") {
+            
+//         fetch(`${host}/flash/addcrypted2`, {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/x-www-form-urlencoded",
+//                 "Referer": "https://clickandload.com",
+//                 "Authorization": basicAuthHeader?basicAuthHeader:null
+//             },
+//             "body": message.payload,
+//         })
+//         .then(response => response)
+//         .then(data => console.log(data))
+//         .catch(error => console.error('Error:', error))
+
+//     }
+// })
+
+/**
+ * 
+ * stage 1 is the page interesting?
+ */
+function checkurl2(details) {
+
+    console.log("any request", details.url)
+    
+    //if (details.url.match(/^[\S]*:9666\//) ) {
+    if (details.url.match(/^[\S]*:9666\//) && !pause) {
+
+        console.log('Potential CNL page detected:', details.url)        
+            try {
+                chrome.scripting.executeScript({
+                    target: { tabId: details.tabId },
+                    func: interceptPost,
+                    args: [host]
+                })
+                console.log('CNL monitor injected into tab:', details.tabId)
+            } catch (error) {
+                console.error('Failed to inject CNL monitor:', error)
+            }        
+            
+
+    }
+}
+
+
+
+
+const RULE = {
+    id: 2,
+    priority: 1,
+    action: {
+        type: "redirect",
+        redirect:  { "extensionPath": "/jdcheck.js" }
+    },
+    condition: {
+        urlFilter: "|http://127.0.0.1:9666",
+        resourceTypes: ["xmlhttprequest", "script"]
+    }
+}
+
+const DEBUGFN = () => {
+    if (chrome.runtime.lastError) {
+        console.log("Error updating rules:", chrome.runtime.lastError)
+    } else {
+        console.log("Dynamic rule added successfully.")
+    }
+}
+const DEBUGFN2 = () => {
+    if (chrome.runtime.lastError) {
+        console.log("Error removing rules:", chrome.runtime.lastError)
+    } else {
+        console.log("Dynamic rule removed successfully.")
+    }
+}
+
+/**
+ * install onBeforeRequestListener after settings are loaded
+ */
+function install_listener(){
+
+    const filter = {
+        urls: [
+            "*://127.0.0.1/*",
+            "*://localhost/*"        
+        ],
+        types: ["main_frame", "sub_frame", "script", "object", "xmlhttprequest"]
+    }
+
+    chrome.webRequest.onBeforeRequest.addListener(checkurl2, filter, [] )
+    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [ RULE ], removeRuleIds: [ RULE.id ] }, DEBUGFN)
+}
+
+/**
+ * if paused remove onBeforeRequestListener
+ */
+function remove_listener(){
+    chrome.webRequest.onBeforeRequest.removeListener( checkurl2 )
+    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [  ], removeRuleIds: [ RULE.id ] }, DEBUGFN2)
+}
+
+
+/**
+ * save pause state
+ * @param {boolean} pause must be set to true or false 
+ */
+// Saves options to chrome.storage.sync.
+function save_options(pause, callback) {
+    chrome.storage.sync.set({
+        pause: pause
+    }, function() {
+        // Update icon status
+        callback()
+    })
+}
+
+
+/**
+ * set extension icon to pause state
+ */
+function disableBrowserAction(){
+    chrome.action.setIcon({path:"images/icon_status_pause.png"})
+    remove_listener()
+}
+/**
+ * set extension icon to normal state
+ */
+function enableBrowserAction(){
+    chrome.action.setIcon({path:"images/icon_status.png"})
+    install_listener()
+}
+
+// Handle extension icon click
+chrome.action.onClicked.addListener(async () => {
+
+    if(pause == false){
+        pause = true
+        save_options(pause,function(){
+            disableBrowserAction()
+        })
+    }else{
+        pause = false
+        save_options(pause,function(){
+            enableBrowserAction()
+        })   
+    }
+
+
+})
+
+
