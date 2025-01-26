@@ -20,10 +20,10 @@
     "permissions": [
         "declarativeNetRequest",
         "webRequest",
-        "webNavigation",
         "storage",
         "activeTab",
-        "scripting"
+        "scripting",
+        "runtime"
     ],
     "background": {
         "service_worker": "background.js"
@@ -34,5 +34,8 @@
             "resources": [ "jdcheck.js" ],
             "matches": ["<all_urls>"]
         }
-    ]
+    ],
+    "externally_connectable": {
+    "matches": ["<all_urls>"]
+    }
 }
