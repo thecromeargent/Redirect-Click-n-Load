@@ -48,23 +48,7 @@ function save_options(pause, callback) {
     })
 }
 
-/**
- * on click handler for extension icon
- * switch state, store and update icon
- */
-function updateState( ){
-    if(pause == false){
-        pause = true
-        save_options(pause,function(){
-            disableBrowserAction()
-        })
-    }else{
-        pause = false
-        save_options(pause,function(){
-            enableBrowserAction()
-        })   
-    }
-}
+
 
 
 /**
@@ -76,13 +60,51 @@ function interceptPost(host){
         'form[action="http://127.0.0.1:9666/flash/addcrypted2"][method="POST"]'
     )
 
-    forms.forEach((form) => {
-        form.action = form.action.replace(/http:\/\/127\.0\.0\.1:9666/, host)
-        form.elements['source'].value = "Redirect Click'n'Load";
-    })
+    // forms.forEach((form) => {
+    //     form.action = form.action.replace(/http:\/\/127\.0\.0\.1:9666/, host)
+    //     form.elements['source'].value = "Redirect Click'n'Load";
+    // })
     
+    //method2
+    //allows custom referrer for jDownloader Security
+    forms.forEach(form => {
+
+        const formData = new FormData(form)
+        
+        //ignore empty forms    
+        if ( formData.get("package") == "" || formData.get("crypted") == "" || formData.get("jk") == "" ) return
+        
+        // Modify specific form fields before sending
+        if (formData.get("source")) {
+            formData.set("source", "Redirect Click'n'Load")
+        }
+        const urlEncodedData = new URLSearchParams(formData).toString()
+        chrome.runtime.sendMessage({ type: "push2jd", payload: urlEncodedData })
+
+    })
+
 }
 
+
+//method2
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "push2jd") {
+            
+        fetch(`${host}/flash/addcrypted2`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": "https://clickandload.com",
+                "Authorization": basicAuthHeader || undefined
+            },
+            "body": message.payload,
+        })
+        .then(response => response)
+        .then(data => console.log(data))
+        .catch(error => console.error('Error:', error))
+
+    }
+})
 
 /**
  * 
@@ -90,30 +112,21 @@ function interceptPost(host){
  */
 function checkurl2(details) {
     
-    if (details.url.match(/^[\S]*:9666\//) && !pause) {
+    //for stage2
+    if (details.url.match(/^[\S]*:9666\/flash\/addcrypted2/) && !pause) {
         try {
             chrome.scripting.executeScript({
                 target: { tabId: details.tabId },
                 func: interceptPost,
                 args: [host]
             })
-            console.log('CNL monitor injected into tab:', details.tabId)
+            console.log('CNL stage2 injected into tab:', details.tabId)
         } catch (error) {
-            console.error('Failed to inject CNL monitor:', error)
+            console.error('Failed to inject stage1:', error)
         }
     }
+    
 }
-
-
-//send host to content script
-// i have added this workaround to have a chance to get feedback
-// if the transmission to jD was sucessfull
-chrome.runtime.onMessageExternal.addListener(
-    function(request, sender, sendResponse) {
-        if (request.type === "push2jd") {
-            sendResponse({host,basicAuthHeader})
-        }
-})
 
 
 const declarativeNetRequestRule = {
@@ -121,53 +134,28 @@ const declarativeNetRequestRule = {
     priority: 1,
     action: {
         type: "redirect",
-        redirect:  { "extensionPath": "/jdcheck.js" }
+        redirect: { extensionPath: "/jdcheck.js" }
     },
     condition: {
-        urlFilter: "|http://127.0.0.1:9666",
-        resourceTypes: ["xmlhttprequest", "script"]
+        urlFilter: "|http://127.0.0.1:9666/jdcheck.js",
+        resourceTypes: ["xmlhttprequest", "script", "main_frame", "sub_frame"]
     }
 }
 
-/**
- * install onBeforeRequestListener after settings are loaded
- */
 function install_listener(){
-
     const filter = {
-        urls: [
-            "*://127.0.0.1/*",
-            "*://localhost/*"        
-        ],
+        urls: ["*://127.0.0.1/*", "*://localhost/*"],
         types: ["main_frame", "sub_frame", "script", "object", "xmlhttprequest"]
     }
-
-    chrome.webRequest.onBeforeRequest.addListener(checkurl2, filter, [] )
-    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [ declarativeNetRequestRule ], removeRuleIds: [ declarativeNetRequestRule.id ] })
+    chrome.webRequest.onBeforeRequest.addListener(checkurl2, filter, [])
+    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [declarativeNetRequestRule], removeRuleIds: [declarativeNetRequestRule.id] })
 }
 
-/**
- * if paused remove onBeforeRequestListener
- */
 function remove_listener(){
-    chrome.webRequest.onBeforeRequest.removeListener( checkurl2 )
-    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [  ], removeRuleIds: [ declarativeNetRequestRule.id ] })
+    chrome.webRequest.onBeforeRequest.removeListener(checkurl2)
+    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [], removeRuleIds: [declarativeNetRequestRule.id] })
 }
 
-
-/**
- * save pause state
- * @param {boolean} pause must be set to true or false 
- */
-// Saves options to chrome.storage.sync.
-function save_options(pause, callback) {
-    chrome.storage.sync.set({
-        pause: pause
-    }, function() {
-        // Update icon status
-        callback()
-    })
-}
 
 
 /**

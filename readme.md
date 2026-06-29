@@ -28,6 +28,14 @@ Wait until page gets green
 
 ## Changelog
 
+* 2026-06-29
+  * migrated to Manifest V3
+  * replaced `eval`-based jdcheck.js injection (broke due to CSP) with `declarativeNetRequest` redirect to bundled `jdcheck.js`
+  * removed `externally_connectable` (invalid with `<all_urls>` in MV3, unused by current flow)
+  * fixed `Authorization` header sending literal `"null"` when no credentials configured
+
+<br>
+
 * 2021-11-28
   * added support for https and basic authentication, due to stronger CORS policy enforcement. https://wicg.github.io/cors-rfc1918
 
