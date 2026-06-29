@@ -1,0 +1,12 @@
+[{
+    "id": 1,
+    "priority": 1,
+    "action": {
+        "type": "redirect",
+        "redirect": { "extensionPath": "/jdcheck.js" }
+    },
+    "condition": {
+        "urlFilter": "|http://127.0.0.1:9666/jdcheck.js",
+        "resourceTypes": ["xmlhttprequest", "script", "main_frame", "sub_frame"]
+    }
+}]

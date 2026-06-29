@@ -9,29 +9,28 @@ var basicAuthHeader = false
 /**
  * load settings from chrome
  */
-chrome.storage.sync.get({ settings: 
-{
+const defaults = {
     targethost: "127.0.0.1",
     targetport: "9666",
     targetproto: "http",
     pause: false,
     targetuser: "",
     targetpasswd: ""
-} 
-}, function(storage) {
-    //GLOBALS
-    host = `${storage.settings.targetproto}://${storage.settings.targethost}:${storage.settings.targetport}`
-    pause = storage.settings.pause
-        
-    //build auth header (must not be used without https)
-    if (storage.settings.targetproto == "https" && storage.settings.targetuser.length > 0 && storage.settings.targetpasswd.length > 0 ){
-        basicAuthHeader = "Basic " + btoa( storage.settings.targetuser + ":" +  storage.settings.targetpasswd)
+}
+
+chrome.storage.sync.get({ settings: defaults }).then(storage => {
+    const s = storage?.settings ?? defaults
+    host = `${s.targetproto}://${s.targethost}:${s.targetport}`
+    pause = s.pause
+
+    if (s.targetproto == "https" && s.targetuser.length > 0 && s.targetpasswd.length > 0) {
+        basicAuthHeader = "Basic " + btoa(s.targetuser + ":" + s.targetpasswd)
     } else {
         basicAuthHeader = false
     }
 
-    if (!pause)install_listener()
-})
+    if (!pause) install_listener()
+}).catch(err => console.error('CNL storage error:', err))
 
 
 /**
@@ -125,22 +124,8 @@ function checkurl2(details) {
             console.error('Failed to inject stage1:', error)
         }
     }
-    
 }
 
-
-const declarativeNetRequestRule = {
-    id: 2,
-    priority: 1,
-    action: {
-        type: "redirect",
-        redirect: { extensionPath: "/jdcheck.js" }
-    },
-    condition: {
-        urlFilter: "|http://127.0.0.1:9666/jdcheck.js",
-        resourceTypes: ["xmlhttprequest", "script", "main_frame", "sub_frame"]
-    }
-}
 
 function install_listener(){
     const filter = {
@@ -148,12 +133,12 @@ function install_listener(){
         types: ["main_frame", "sub_frame", "script", "object", "xmlhttprequest"]
     }
     chrome.webRequest.onBeforeRequest.addListener(checkurl2, filter, [])
-    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [declarativeNetRequestRule], removeRuleIds: [declarativeNetRequestRule.id] })
+    chrome.declarativeNetRequest.updateEnabledRulesets({ enableRulesetIds: ["ruleset_jdcheck"] })
 }
 
 function remove_listener(){
     chrome.webRequest.onBeforeRequest.removeListener(checkurl2)
-    chrome.declarativeNetRequest.updateDynamicRules({ addRules: [], removeRuleIds: [declarativeNetRequestRule.id] })
+    chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ["ruleset_jdcheck"] })
 }
 
 

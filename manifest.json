@@ -17,17 +17,29 @@
     },
 
     "host_permissions": ["<all_urls>"],
+    "declarative_net_request": {
+        "rule_resources": [{
+            "id": "ruleset_jdcheck",
+            "enabled": true,
+            "path": "rules.json"
+        }]
+    },
     "permissions": [
         "declarativeNetRequest",
         "webRequest",
         "storage",
-        "activeTab",
         "scripting"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "scripts": ["background.js"]
     },
-    "version": "1.5.0",
+    "version": "1.5.2",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "{7aa68253-f2d9-436e-8688-de2047152b94}"
+        }
+    },
     "web_accessible_resources": [
         {
             "resources": ["jdcheck.js"],
