@@ -34,7 +34,7 @@
         "service_worker": "background.js",
         "scripts": ["background.js"]
     },
-    "version": "1.5.2",
+    "version": "1.6.2",
     "browser_specific_settings": {
         "gecko": {
             "id": "{7aa68253-f2d9-436e-8688-de2047152b94}"

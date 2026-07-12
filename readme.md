@@ -28,6 +28,14 @@ Wait until page gets green
 
 ## Changelog
 
+* 2026-07-12
+  * restyled options page (no CSS library), added dark mode
+  * export/import settings now in their own row, Save button aligned right
+  * added "Test connection" button to verify the target host/port is reachable before saving
+  * "Test connection" now requests the `<all_urls>` host permission at click time, needed because Firefox ships it as an optional, user-toggleable permission (disabled by default) regardless of it being listed in `host_permissions`, causing a silent CORS failure otherwise
+
+<br>
+
 * 2026-06-29
   * migrated to Manifest V3
   * replaced `eval`-based jdcheck.js injection (broke due to CSP) with `declarativeNetRequest` redirect to bundled `jdcheck.js`
@@ -63,6 +71,7 @@ Wait until page gets green
 * check if plugin is enabled (not paused)
 * check if target is running and accessible
 * check options if target hostname is still set
+* Firefox: "Access your data for all websites" is disabled by default (`about:addons` > Redirect Click'n'Load > Permissions). Click "Test connection" once to trigger the permission prompt, or enable the toggle manually.
 
 
 
