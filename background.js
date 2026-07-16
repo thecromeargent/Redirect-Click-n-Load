@@ -63,22 +63,22 @@ function interceptPost(host){
     //     form.action = form.action.replace(/http:\/\/127\.0\.0\.1:9666/, host)
     //     form.elements['source'].value = "Redirect Click'n'Load";
     // })
-    
+
     //method2
     //allows custom referrer for jDownloader Security
     forms.forEach(form => {
 
         const formData = new FormData(form)
-        
-        //ignore empty forms    
+
+        //ignore empty forms
         if ( formData.get("package") == "" || formData.get("crypted") == "" || formData.get("jk") == "" ) return
-        
+
         // Modify specific form fields before sending
         if (formData.get("source")) {
             formData.set("source", "Redirect Click'n'Load")
         }
         const urlEncodedData = new URLSearchParams(formData).toString()
-        chrome.runtime.sendMessage({ type: "push2jd", payload: urlEncodedData })
+        chrome.runtime.sendMessage({ type: "push2jd", endpoint: "addcrypted2", payload: urlEncodedData })
 
     })
 
@@ -86,10 +86,12 @@ function interceptPost(host){
 
 
 //method2
+//also receives "push2jd" messages relayed from relay.js (patch-fetch.js intercepting
+//plain fetch() calls to /flash/add on sites that don't use a <form>)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "push2jd") {
-            
-        fetch(`${host}/flash/addcrypted2`, {
+    if (message.type === "push2jd" && !pause) {
+
+        fetch(`${host}/flash/${message.endpoint}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -106,11 +108,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 })
 
 /**
- * 
+ *
  * stage 1 is the page interesting?
  */
 function checkurl2(details) {
-    
+
     //for stage2
     if (details.url.match(/^[\S]*:9666\/flash\/addcrypted2/) && !pause) {
         try {

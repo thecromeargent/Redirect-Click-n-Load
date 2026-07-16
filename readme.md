@@ -28,6 +28,12 @@ Wait until page gets green
 
 ## Changelog
 
+* 2026-07-16
+  * fixed `/flash/add` requests (plain `fetch()`/XHR calls, no `<form>` involved, e.g. hide.cx) not being redirected
+  * fixed with a `content_scripts` entry running in the `"world": "MAIN"` at `document_start`, patching `fetch` before the page's own scripts run, then relaying the intercepted call to an ISOLATED-world script via `postMessage` (MAIN world has no `chrome.runtime` access) which forwards it to the background page for the actual request
+
+<br>
+
 * 2026-07-12
   * restyled options page (no CSS library), added dark mode
   * export/import settings now in their own row, Save button aligned right

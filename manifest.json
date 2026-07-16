@@ -17,6 +17,21 @@
     },
 
     "host_permissions": ["<all_urls>"],
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["patch-fetch.js"],
+            "world": "MAIN",
+            "run_at": "document_start",
+            "all_frames": true
+        },
+        {
+            "matches": ["<all_urls>"],
+            "js": ["relay.js"],
+            "run_at": "document_start",
+            "all_frames": true
+        }
+    ],
     "declarative_net_request": {
         "rule_resources": [{
             "id": "ruleset_jdcheck",
@@ -34,7 +49,7 @@
         "service_worker": "background.js",
         "scripts": ["background.js"]
     },
-    "version": "1.6.2",
+    "version": "1.7.0",
     "browser_specific_settings": {
         "gecko": {
             "id": "{7aa68253-f2d9-436e-8688-de2047152b94}"
