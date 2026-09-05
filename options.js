@@ -10,6 +10,7 @@ function save_options() {
       targethost:   document.getElementById('targethost').value,
       targetport:   document.getElementById('targetport').value,
       targetproto:  document.getElementById('targetproto').value,
+      pyloadmode:   document.getElementById('pyloadmode').checked,
       targetuser:   document.getElementById('targetuser').value,
       targetpasswd: document.getElementById('targetpasswd').value
     }
@@ -36,6 +37,7 @@ function restore_options() {
       targethost: '127.0.0.1',
       targetport: '9666',
       targetproto: 'http',
+      pyloadmode: false,
       targetuser: "",
       targetpasswd: ""
 
@@ -45,6 +47,7 @@ function restore_options() {
     document.getElementById('targethost').value = storage.settings.targethost;
     document.getElementById('targetport').value = parseInt(storage.settings.targetport);
     document.getElementById('targetproto').value = storage.settings.targetproto;
+    document.getElementById('pyloadmode').checked = storage.settings.pyloadmode === true;
     document.getElementById('targetuser').value = storage.settings.targetuser;
     document.getElementById('targetpasswd').value = storage.settings.targetpasswd;
   });

@@ -6,6 +6,8 @@ var pause = false
 var basicAuthHeader = false
 
 
+const PYLOAD_HOST_RULE_ID = 9666
+
 /**
  * load settings from chrome
  */
@@ -14,14 +16,51 @@ const defaults = {
     targetport: "9666",
     targetproto: "http",
     pause: false,
+    pyloadmode: false,
     targetuser: "",
     targetpasswd: ""
 }
 
-chrome.storage.sync.get({ settings: defaults }).then(storage => {
+async function configurePyloadHostRule(settings) {
+    await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [PYLOAD_HOST_RULE_ID]
+    })
+
+    if (!settings.pyloadmode) return
+
+    const target = `${settings.targetproto}://${settings.targethost}:${settings.targetport}/`
+    await chrome.declarativeNetRequest.updateDynamicRules({
+        addRules: [{
+            id: PYLOAD_HOST_RULE_ID,
+            priority: 100,
+            action: {
+                type: "modifyHeaders",
+                requestHeaders: [{
+                    header: "host",
+                    operation: "set",
+                    value: "127.0.0.1:9666"
+                }]
+            },
+            condition: {
+                urlFilter: `|${target}`,
+                resourceTypes: [
+                    "main_frame",
+                    "sub_frame",
+                    "script",
+                    "xmlhttprequest",
+                    "other"
+                ]
+            }
+        }]
+    })
+}
+
+chrome.storage.sync.get({ settings: defaults }).then(async storage => {
     const s = storage?.settings ?? defaults
     host = `${s.targetproto}://${s.targethost}:${s.targetport}`
     pause = s.pause
+
+    await configurePyloadHostRule(s)
 
     if (s.targetproto == "https" && s.targetuser.length > 0 && s.targetpasswd.length > 0) {
         basicAuthHeader = "Basic " + btoa(s.targetuser + ":" + s.targetpasswd)
@@ -31,6 +70,24 @@ chrome.storage.sync.get({ settings: defaults }).then(storage => {
 
     if (!pause) install_listener()
 }).catch(err => console.error('CNL storage error:', err))
+
+
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "sync" || !changes.settings) return
+
+    const s = { ...defaults, ...(changes.settings.newValue || {}) }
+    host = `${s.targetproto}://${s.targethost}:${s.targetport}`
+
+    if (s.targetproto == "https" && s.targetuser.length > 0 && s.targetpasswd.length > 0) {
+        basicAuthHeader = "Basic " + btoa(s.targetuser + ":" + s.targetpasswd)
+    } else {
+        basicAuthHeader = false
+    }
+
+    configurePyloadHostRule(s).catch(error =>
+        console.error("Unable to install pyLoad Host header rule:", error)
+    )
+})
 
 
 /**
