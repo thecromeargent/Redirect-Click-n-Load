@@ -1,169 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Options</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      --bg: #f5f6f8;
-      --card: #ffffff;
-      --text: #1c1e21;
-      --muted: #6b7280;
-      --border: #d9dce1;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1c1e21;
-        --card: #26282c;
-        --text: #eaeaea;
-        --muted: #9aa0a8;
-        --border: #3a3d42;
-        --accent: #3b82f6;
-        --accent-hover: #60a5fa;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 24px;
-      min-height: 450px;
-      min-width: 500px;
-    }
-    .container {
-      max-width: 640px;
-      margin: 0 auto;
-    }
-    h1 { font-size: 1.5rem; margin: 0 0 20px; }
-    h2 { font-size: 1.1rem; margin: 28px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 20px;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    td { padding: 8px 0; vertical-align: middle; }
-    td:first-child { width: 40%; color: var(--muted); }
-    th { text-align: left; padding: 14px 0 6px; font-size: 0.9rem; color: var(--muted); font-weight: 600; }
-    input, select {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      background: var(--card);
-      color: var(--text);
-      font-size: 0.95rem;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    input:invalid {
-      border: 2px dashed #e11d48;
-    }
-    .actions { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-    .actions-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .actions-row.save-row { justify-content: flex-end; }
-    button {
-      padding: 7px 14px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-    button:hover { background: var(--accent-hover); }
-    #export, #import { background: var(--card); color: var(--text); }
-    #export:hover, #import:hover { background: var(--bg); }
-    #status { display: inline; color: var(--muted); }
-    #testResult { font-size: 0.9rem; }
-    #testResult.ok { color: #16a34a; }
-    #testResult.fail { color: #e11d48; }
-    p { line-height: 1.5; color: var(--text); }
-    a { color: var(--accent); }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redirect Click'n'Load settings</title>
+  <link rel="stylesheet" href="options.css">
 </head>
-
 <body>
-  <div class="container">
-    <h1>Redirect Click'n'Load</h1>
-
-    <h2>Settings</h2>
-    <div class="card">
-    <table>
-      <tr>
-        <td><label for="targethost"> Target Hostname/IP </label></td>
-        <td><input id="targethost" type="text" placeholder="127.0.0.1"></td>
-      </tr>
-      <tr>
-        <td><label for="targetport"> Target Port</label></td>
-       <td><input id="targetport" type="number" placeholder="9666" min="1" max="65535" ></td>
-      </tr>
-      <tr>
-        <td><label for="targetproto"> Target Protocol</label></td>
-        <td>
-          <select name="proto" id="targetproto" required>
-            <option value="http">http</option>
-            <option value="https">https</option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <td><label for="pyloadmode">pyLoad remote compatibility</label></td>
-        <td><input id="pyloadmode" type="checkbox"></td>
-      </tr>
-      <tr>
-        <th colspan="2">Add Authentication Header (only if Protocol is https)</th>
-      </tr>
-      <tr>
-        <td><label for="targetuser"> Username</label></td>
-       <td><input id="targetuser" type="text" placeholder="username" ></td>
-      </tr>
-      <tr>
-        <td><label for="targetpasswd"> Password</label></td>
-       <td><input id="targetpasswd" type="password" placeholder="****" min="8" max="128" ></td>
-      </tr>
-    </table>
-    <div class="actions">
-      <div class="actions-row">
-        <button id="test" type="button">Test connection</button>
-        <span id="testResult"></span>
+  <main class="settings-shell">
+    <header class="app-header">
+      <img class="app-icon" src="images/icon.png" alt="">
+      <div>
+        <h1>Redirect Click'n'Load</h1>
+        <p>Forward browser links to your remote download manager.</p>
       </div>
-      <div class="actions-row">
-        <button id="export">Export settings</button>
-        <button id="import">Import settings</button>
-        <input type="file" id="importFile" accept="application/json" style="display:none">
+      <span class="mode-badge" id="modeBadge">jDownloader</span>
+    </header>
+
+    <form id="settingsForm">
+      <section class="settings-section" aria-labelledby="connectionHeading">
+        <div class="section-heading">
+          <h2 id="connectionHeading">Connection</h2>
+          <p>The address of the machine running pyLoad or jDownloader.</p>
+        </div>
+        <div class="field-grid">
+          <label class="field field-host">
+            <span>Hostname or IP</span>
+            <input id="targethost" type="text" placeholder="127.0.0.1" required autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Port</span>
+            <input id="targetport" type="number" placeholder="9666" min="1" max="65535" required>
+          </label>
+          <label class="field">
+            <span>Protocol</span>
+            <select id="targetproto" required>
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section mode-section" aria-labelledby="modeHeading">
+        <div class="mode-copy">
+          <h2 id="modeHeading">pyLoad compatibility</h2>
+          <p id="modeHelp">Off for jDownloader. Turn on only for a remote pyLoad server.</p>
+        </div>
+        <label class="switch">
+          <input id="pyloadmode" type="checkbox" aria-describedby="modeHelp">
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          <span class="switch-label" id="switchLabel">Off</span>
+        </label>
+      </section>
+
+      <section class="settings-section" id="authenticationSection" aria-labelledby="authenticationHeading" hidden>
+        <div class="section-heading">
+          <h2 id="authenticationHeading">HTTPS authentication</h2>
+          <p>Optional credentials sent with requests to the configured server.</p>
+        </div>
+        <div class="field-grid auth-grid">
+          <label class="field">
+            <span>Username</span>
+            <input id="targetuser" type="text" autocomplete="username">
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input id="targetpasswd" type="password" autocomplete="current-password">
+          </label>
+        </div>
+      </section>
+
+      <div class="primary-actions">
+        <span class="status" id="status" role="status" aria-live="polite"></span>
+        <button class="button button-secondary" id="test" type="button">Test connection</button>
+        <button class="button button-primary" id="save" type="submit">Save settings</button>
       </div>
-      <div class="actions-row save-row">
-        <div id="status"></div>
-        <button id="save">Save</button>
+      <p class="test-result" id="testResult" role="status" aria-live="polite"></p>
+    </form>
+
+    <details class="utility-section">
+      <summary>Backup and restore</summary>
+      <p>Export these settings to a JSON file or restore a previous backup.</p>
+      <div class="utility-actions">
+        <button class="button button-quiet" id="export" type="button">Export settings</button>
+        <button class="button button-quiet" id="import" type="button">Import settings</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
       </div>
-    </div>
-    </div>
+    </details>
 
-    <h2>How it works</h2>
-        <p>This Extension changes the Hostname/IP of requests to localhost:9666/127.0.0.1:9666.
-            The value you entered above will be set as new Hostname/IP.</p>
-        <p>With this Extension you don't need to setup an SSH Port Forward anymore.</p>
-    
-    <h2>Github</h2> 
-    <p>This Extension is on Github. Issues and Feature Requests can be made there.</p>
-    <a href="https://github.com/werty1st/Redirect-Click-n-Load" >https://github.com/werty1st/Redirect-Click-n-Load</a>
-
-    <h2>Cedits</h2>
-    <p>Starting point was an other very small Extension from rested.io but there is nothing left from their code.</p>
-    <p>Thanks to the Google Chrome Developer portal for the good documentation.</p>
-    <p>I took the JD Logo from the Google Image Search. If somebody wants to make a better one feel free to do it.</p>
-  </div>
-
+    <footer>
+      <a href="https://github.com/werty1st/Redirect-Click-n-Load">Original project by Ronny Adams</a>
+    </footer>
+  </main>
   <script src="options.js"></script>
-
 </body>
 </html>
-

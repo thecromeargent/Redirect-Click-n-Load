@@ -1,157 +1,164 @@
-// zip -1 -x "*screens*" -x "*metadata*" -x "*/\.*" x ".*"  -x "*.zip" -r addon.zip .
-
-
-
-// Saves options to chrome.storage.sync.
-function save_options() {
-
-  chrome.storage.sync.set({ settings:
-    {
-      targethost:   document.getElementById('targethost').value,
-      targetport:   document.getElementById('targetport').value,
-      targetproto:  document.getElementById('targetproto').value,
-      pyloadmode:   document.getElementById('pyloadmode').checked,
-      targetuser:   document.getElementById('targetuser').value,
-      targetpasswd: document.getElementById('targetpasswd').value
-    }
-  }, function() {
-    // Update status to let user know options were saved.
-    var status = document.getElementById('status');
-    status.textContent = ' Saved.';
-
-    //reload background script
-    chrome.extension.getBackgroundPage().window.location.reload();
-    
-    setTimeout(function() {
-      status.textContent = '';
-    }, 750);
-  });
+const defaults = {
+  targethost: '127.0.0.1',
+  targetport: '9666',
+  targetproto: 'http',
+  pyloadmode: false,
+  targetuser: '',
+  targetpasswd: ''
 }
 
-// Restores select box and checkbox state using the preferences
-// stored in chrome.storage.
-function restore_options() {
-  // Use default value color = 'red' and likesColor = true.
-  chrome.storage.sync.get({ settings: 
-    {
-      targethost: '127.0.0.1',
-      targetport: '9666',
-      targetproto: 'http',
-      pyloadmode: false,
-      targetuser: "",
-      targetpasswd: ""
+const form = document.getElementById('settingsForm')
+const modeToggle = document.getElementById('pyloadmode')
+const protocolSelect = document.getElementById('targetproto')
+const status = document.getElementById('status')
+const testResult = document.getElementById('testResult')
+let settingsDirty = false
 
-    }
-  }, function(storage) {
-    console.log(storage.settings)
-    document.getElementById('targethost').value = storage.settings.targethost;
-    document.getElementById('targetport').value = parseInt(storage.settings.targetport);
-    document.getElementById('targetproto').value = storage.settings.targetproto;
-    document.getElementById('pyloadmode').checked = storage.settings.pyloadmode === true;
-    document.getElementById('targetuser').value = storage.settings.targetuser;
-    document.getElementById('targetpasswd').value = storage.settings.targetpasswd;
-  });
-}
-
-// Downloads current settings as a JSON file.
-function export_options() {
-  chrome.storage.sync.get({ settings: {} }, function(storage) {
-    var blob = new Blob([JSON.stringify(storage.settings, null, 2)], { type: 'application/json' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'redirect-clicknload-settings.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
-}
-
-// Reads a JSON file picked by the user and saves it as settings.
-function import_options(event) {
-  var file = event.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function() {
-    var settings;
-    try {
-      settings = JSON.parse(reader.result);
-    } catch (e) {
-      document.getElementById('status').textContent = ' Invalid JSON file.';
-      return;
-    }
-    chrome.storage.sync.set({ settings: settings }, function() {
-      restore_options();
-      var status = document.getElementById('status');
-      status.textContent = ' Imported.';
-      chrome.extension.getBackgroundPage().window.location.reload();
-      setTimeout(function() { status.textContent = ''; }, 750);
-    });
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-// Checks reachability of the currently entered target via jdcheck.js.
-function test_connection() {
-  var result = document.getElementById('testResult');
-  var host = document.getElementById('targethost').value;
-  var port = document.getElementById('targetport').value;
-  var proto = document.getElementById('targetproto').value;
-  var user = document.getElementById('targetuser').value;
-  var passwd = document.getElementById('targetpasswd').value;
-
-  result.className = '';
-  result.textContent = 'Testing...';
-
-  // Firefox always ships the "<all_urls>" host permission as an optional,
-  // user-toggleable switch (about:addons > Permissions), regardless of it
-  // being listed under host_permissions in the manifest. Request it here so
-  // the user gets the native permission prompt instead of a silent CORS
-  // failure.
-  chrome.permissions.request({ origins: ['<all_urls>'] }, function(granted) {
-    if (!granted) {
-      result.className = 'fail';
-      result.textContent = 'Connection failed: permission to access all sites was not granted.';
-      return;
-    }
-    run_test_connection();
-  });
-
-  function run_test_connection() {
-    var headers = {};
-    if (proto === 'https' && user) {
-      headers['Authorization'] = 'Basic ' + btoa(user + ':' + passwd);
-    }
-
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 5000);
-
-    fetch(proto + '://' + host + ':' + port + '/jdcheck.js', {
-      headers: headers,
-      signal: controller.signal
-    })
-      .then(function(response) {
-        clearTimeout(timeout);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.text();
-      })
-      .then(function(text) {
-        if (text.indexOf('jdownloader=true') === -1) throw new Error('unexpected response');
-        result.className = 'ok';
-        result.textContent = 'Connection OK.';
-      })
-      .catch(function(err) {
-        clearTimeout(timeout);
-        result.className = 'fail';
-        result.textContent = 'Connection failed: ' + err.message;
-      });
+function readForm() {
+  return {
+    targethost: document.getElementById('targethost').value.trim(),
+    targetport: document.getElementById('targetport').value,
+    targetproto: protocolSelect.value,
+    pyloadmode: modeToggle.checked,
+    targetuser: document.getElementById('targetuser').value,
+    targetpasswd: document.getElementById('targetpasswd').value
   }
 }
 
-document.addEventListener('DOMContentLoaded', restore_options);
-document.getElementById('save').addEventListener('click', save_options);
-document.getElementById('test').addEventListener('click', test_connection);
-document.getElementById('export').addEventListener('click', export_options);
-document.getElementById('import').addEventListener('click', function() {
-  document.getElementById('importFile').click();
-});
-document.getElementById('importFile').addEventListener('change', import_options);
+function updateModeUi() {
+  const pyloadEnabled = modeToggle.checked
+  document.getElementById('modeBadge').textContent = pyloadEnabled ? 'pyLoad' : 'jDownloader'
+  document.getElementById('switchLabel').textContent = pyloadEnabled ? 'On' : 'Off'
+  document.getElementById('modeHelp').textContent = pyloadEnabled
+    ? 'On for remote pyLoad. Requests keep the Host header expected by pyLoad.'
+    : 'Off for jDownloader. Standard Click\'n\'Load forwarding stays unchanged.'
+}
+
+function updateAuthenticationUi() {
+  document.getElementById('authenticationSection').hidden = protocolSelect.value !== 'https'
+}
+
+function showStatus(message, isError = false) {
+  status.textContent = message
+  status.style.color = isError ? 'var(--danger)' : ''
+  window.clearTimeout(showStatus.timer)
+  showStatus.timer = window.setTimeout(() => {
+    status.textContent = ''
+    status.style.color = ''
+  }, 1800)
+}
+
+function persistOptions(callback) {
+  if (!form.reportValidity()) return
+  chrome.storage.sync.set({ settings: readForm() }, () => {
+    if (chrome.runtime.lastError) {
+      showStatus('Could not save settings.', true)
+      return
+    }
+    showStatus('Settings saved')
+    settingsDirty = false
+    if (callback) callback()
+  })
+}
+
+function restoreOptions() {
+  chrome.storage.sync.get({ settings: defaults }, storage => {
+    const settings = { ...defaults, ...(storage.settings || {}) }
+    document.getElementById('targethost').value = settings.targethost
+    document.getElementById('targetport').value = settings.targetport
+    protocolSelect.value = settings.targetproto
+    modeToggle.checked = settings.pyloadmode === true
+    document.getElementById('targetuser').value = settings.targetuser
+    document.getElementById('targetpasswd').value = settings.targetpasswd
+    updateModeUi()
+    updateAuthenticationUi()
+    settingsDirty = false
+  })
+}
+
+function testConnection() {
+  if (settingsDirty) {
+    testResult.className = 'test-result fail'
+    testResult.textContent = 'Save your changes before testing the connection.'
+    return
+  }
+  testResult.className = 'test-result'
+  testResult.textContent = 'Testing connection…'
+  const settings = readForm()
+  chrome.permissions.request({ origins: ['<all_urls>'] }, granted => {
+    if (!granted) {
+      testResult.className = 'test-result fail'
+      testResult.textContent = 'Connection failed: permission to access the target was not granted.'
+      return
+    }
+    const headers = {}
+    if (settings.targetproto === 'https' && settings.targetuser) {
+      headers.Authorization = 'Basic ' + btoa(settings.targetuser + ':' + settings.targetpasswd)
+    }
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 5000)
+    fetch(`${settings.targetproto}://${settings.targethost}:${settings.targetport}/jdcheck.js`, {
+      headers,
+      signal: controller.signal
+    })
+      .then(response => {
+        window.clearTimeout(timeout)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return response.text()
+      })
+      .then(text => {
+        if (!text.includes('jdownloader=true')) throw new Error('unexpected response')
+        testResult.className = 'test-result ok'
+        testResult.textContent = `Connection OK · ${settings.pyloadmode ? 'pyLoad' : 'jDownloader'} mode`
+      })
+      .catch(error => {
+        window.clearTimeout(timeout)
+        testResult.className = 'test-result fail'
+        testResult.textContent = `Connection failed: ${error.message}`
+      })
+  })
+}
+
+function exportOptions() {
+  chrome.storage.sync.get({ settings: defaults }, storage => {
+    const blob = new Blob([JSON.stringify(storage.settings, null, 2)], { type: 'application/json' })
+    const anchor = document.createElement('a')
+    anchor.href = URL.createObjectURL(blob)
+    anchor.download = 'redirect-clicknload-settings.json'
+    anchor.click()
+    URL.revokeObjectURL(anchor.href)
+  })
+}
+
+function importOptions(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const settings = { ...defaults, ...JSON.parse(reader.result) }
+      chrome.storage.sync.set({ settings }, () => {
+        restoreOptions()
+        showStatus('Settings imported')
+      })
+    } catch (error) {
+      showStatus('Invalid settings file.', true)
+    }
+  }
+  reader.readAsText(file)
+  event.target.value = ''
+}
+
+form.addEventListener('submit', event => {
+  event.preventDefault()
+  persistOptions()
+})
+form.addEventListener('input', () => { settingsDirty = true })
+form.addEventListener('change', () => { settingsDirty = true })
+modeToggle.addEventListener('change', updateModeUi)
+protocolSelect.addEventListener('change', updateAuthenticationUi)
+document.getElementById('test').addEventListener('click', testConnection)
+document.getElementById('export').addEventListener('click', exportOptions)
+document.getElementById('import').addEventListener('click', () => document.getElementById('importFile').click())
+document.getElementById('importFile').addEventListener('change', importOptions)
+document.addEventListener('DOMContentLoaded', restoreOptions)
