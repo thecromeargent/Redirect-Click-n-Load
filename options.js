@@ -95,21 +95,32 @@ function testConnection() {
     if (settings.targetproto === 'https' && settings.targetuser) {
       headers.Authorization = 'Basic ' + btoa(settings.targetuser + ':' + settings.targetpasswd)
     }
+    const baseUrl = `${settings.targetproto}://${settings.targethost}:${settings.targetport}`
+    const probeUrl = settings.pyloadmode
+      ? `${baseUrl}/flash/addcrypted2`
+      : `${baseUrl}/jdcheck.js`
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 5000)
-    fetch(`${settings.targetproto}://${settings.targethost}:${settings.targetport}/jdcheck.js`, {
+    fetch(probeUrl, {
       headers,
       signal: controller.signal
     })
       .then(response => {
         window.clearTimeout(timeout)
+        if (settings.pyloadmode) {
+          if (response.status === 404) throw new Error('pyLoad CNL endpoint not found')
+          if (!response.ok && response.status !== 405) throw new Error(`HTTP ${response.status}`)
+          return null
+        }
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         return response.text()
       })
       .then(text => {
-        if (!text.includes('jdownloader=true')) throw new Error('unexpected response')
+        if (!settings.pyloadmode && !text.includes('jdownloader=true')) throw new Error('unexpected response')
         testResult.className = 'test-result ok'
-        testResult.textContent = `Connection OK · ${settings.pyloadmode ? 'pyLoad' : 'jDownloader'} mode`
+        testResult.textContent = settings.pyloadmode
+          ? 'Connection OK · pyLoad CNL endpoint reachable'
+          : 'Connection OK · jDownloader mode'
       })
       .catch(error => {
         window.clearTimeout(timeout)
