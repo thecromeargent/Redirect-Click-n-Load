@@ -127,8 +127,8 @@ function interceptPost(host){
 
         const formData = new FormData(form)
 
-        //ignore empty forms
-        if ( formData.get("package") == "" || formData.get("crypted") == "" || formData.get("jk") == "" ) return
+        // A package name is optional; encrypted links and their key are required.
+        if (!formData.get("crypted") || !formData.get("jk")) return
 
         // Modify specific form fields before sending
         if (formData.get("source")) {
