@@ -56,11 +56,15 @@ async function configurePyloadHostRule(settings) {
 }
 
 chrome.storage.sync.get({ settings: defaults }).then(async storage => {
-    const s = storage?.settings ?? defaults
+    const s = { ...defaults, ...(storage?.settings || {}) }
     host = `${s.targetproto}://${s.targethost}:${s.targetport}`
     pause = s.pause
 
-    await configurePyloadHostRule(s)
+    try {
+        await configurePyloadHostRule(s)
+    } catch (error) {
+        console.error("Unable to install pyLoad Host header rule:", error)
+    }
 
     if (s.targetproto == "https" && s.targetuser.length > 0 && s.targetpasswd.length > 0) {
         basicAuthHeader = "Basic " + btoa(s.targetuser + ":" + s.targetpasswd)
@@ -112,8 +116,8 @@ function save_options(pause, callback) {
  */
 function interceptPost(host){
 
-    const forms = document.querySelectorAll(
-        'form[action="http://127.0.0.1:9666/flash/addcrypted2"][method="POST"]'
+    const forms = Array.from(document.forms).filter(form =>
+        /\/flash\/addcrypted2(?:$|\?)/.test(form.action || "")
     )
 
     // forms.forEach((form) => {
