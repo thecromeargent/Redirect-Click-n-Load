@@ -47,8 +47,7 @@
         "scripting"
     ],
     "background": {
-        "service_worker": "background.js",
-        "scripts": ["background.js"]
+        "service_worker": "background.js"
     },
     "version": "1.7.0",
     "browser_specific_settings": {
