@@ -175,18 +175,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function checkurl2(details) {
 
     //for stage2
-    if (details.url.match(/^[\S]*:9666\/flash\/addcrypted2/) && !pause) {
-        try {
-            chrome.scripting.executeScript({
-                target: { tabId: details.tabId },
-                func: interceptPost,
-                args: [host]
-            })
-            console.log('CNL stage2 injected into tab:', details.tabId)
-        } catch (error) {
-            console.error('Failed to inject stage1:', error)
-        }
-    }
+    if (details.tabId < 0 || !details.url.match(/^[\S]*:9666\/flash\/addcrypted2/) || pause) return
+
+    chrome.scripting.executeScript({
+        target: { tabId: details.tabId },
+        func: interceptPost,
+        args: [host]
+    }).then(() => {
+        console.log('CNL stage2 injected into tab:', details.tabId)
+    }).catch(error => {
+        console.error('Failed to inject stage1:', error)
+    })
 }
 
 
